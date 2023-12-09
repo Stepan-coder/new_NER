@@ -8,15 +8,19 @@ from NER.markup import *
 from typing import List, Dict, Any
 from deeppavlov import configs, build_model
 from natasha import NamesExtractor, AddrExtractor, DatesExtractor, MoneyExtractor, MorphVocab
+
+
 # pip install git+https://github.com/Koziev/rutokenizer
 
 
 class MarkUpBlock:
-    def __init__(self, text: str, block_type: MarkUpType, start: int = 0, end: int = 0):
+    def __init__(self, text: str, block_type: MarkUpType, start: int = 0, end: int = 0,
+                 attachments: Dict[str, Any] = {}):
         self._text = text
         self._block_type = block_type
         self._start = start
         self._end = end
+        self._attachments = attachments
 
     @property
     def text(self) -> str:
@@ -64,11 +68,21 @@ class MarkUpBlock:
             raise ValueError(f"Start index should be grater then zero")
         self._end = end
 
+    @property
+    def attachments(self) -> Dict[str, Any]:
+        return self._attachments
+
+    @attachments.setter
+    def attachments(self, attachments: Dict[str, Any]) -> None:
+        self._attachments = attachments
+
     def to_json(self) -> json:
         return {"text": self._text,
                 "block_type": self._block_type,
                 "start": self._start,
-                "end": self._end}
+                "end": self._end,
+                "attachments": self._attachments}
+
 
 
 class TextMarkUp:
@@ -121,8 +135,10 @@ class TextMarkUp:
             for sector in tqdm(text_sector, desc="Getting Named Entities..."):
                 text_markup += self.rebuild_markup(self.get_bert_markup(input_text=sector))
         else:
-            text_markup = [{text: {}}]
-        text_markup = self.rebuild_markup(self.get_inn_markup(text_markup=text_markup))
+            text_markup = [MarkUpBlock(text=text, block_type=MarkUpType.NOTHING, start=0, end=len(text))]
+        inn = self.get_inn_markup(text_markup=text_markup)
+        rebuild = self.rebuild_markup(inn)
+        text_markup = self.rebuild_markup(self.get_inn_markup(text_markup=rebuild))
         text_markup = self.rebuild_markup(self.get_kpp_markup(text_markup=text_markup))
         text_markup = self.rebuild_markup(self.get_bic_markup(text_markup=text_markup))
         text_markup = self.rebuild_markup(self.get_phone_markup(text_markup=text_markup))
@@ -130,20 +146,17 @@ class TextMarkUp:
         text_markup = self.rebuild_markup(self.get_emails_markup(text_markup=text_markup))
         text_markup = self.rebuild_markup(self.get_urls_markup(text_markup=text_markup))
         text_markup = self.rebuild_markup(self.get_date_markup(text_markup=text_markup))
-        text_markup = self.rebuild_markup(self.get_money_markup(text_markup=text_markup))
-        return text_markup
+        return [tm.to_json() for tm in text_markup]
 
-    def get_bert_markup(self, input_text: str) -> List[Dict[str, Dict[str, str]]]:
+    def get_bert_markup(self, text: str) -> List[MarkUpBlock]:
         """
-
-        :param input_text: The text witch we needs tu markup
+        :param text: The text witch we need tu markup
         :return: List[Dict[str, dict]]
         """
         start_index = 0
-        text = input_text
         last_block_type = None
         text_markup = []
-        tokens, tags = self._ner([input_text])
+        tokens, tags = self._ner([text])
         for tok, tag in zip(tokens[0], tags[0]):
             gap = text[:text.index(tok)]
             text = text[text.index(tok) + len(tok):]
@@ -160,27 +173,26 @@ class TextMarkUp:
                 text_markup[-1].end += len(gap) + len(tok)
             start_index += len(gap) + len(tok)
             last_block_type = block_type
+        return text_markup
 
-        return [text_markup[i].to_json() for i in range(len(text_markup))]
-
-    def get_date_markup(self, text_markup: List[Dict[str, Dict[str, str]]]) -> List[Dict[str, Dict[str, str]]]:
+    def get_date_markup(self, text_markup: List[MarkUpBlock]) -> List[MarkUpBlock]:
         """
         This class receives the pre-marked text as input and places the dates from the pieces
          that have not yet been marked up.
         :param text_markup: Pre-marked text
         :return: List[Dict[str, dict]]
         """
-        result_text_markup = []
+        result_markup = []
         for tm in range(len(text_markup)):
-            piese_text = list(text_markup[tm])[0]
-            if len(text_markup[tm][piese_text]) == 0:
-                dates = self._dates_extractor(piese_text)
+            if MarkUpType(text_markup[tm].block_type) == MarkUpType.NOTHING:
+                dates = self._dates_extractor(text_markup[tm].text)
                 left_bounce = 0
-                pieses = []
                 for date in dates:
-                    start = date.as_json["start"]
-                    stop = date.as_json["stop"]
-                    pieses.append({piese_text[left_bounce:start]: {}})  # закрыли левую границу итерации
+                    if date.as_json["start"] - left_bounce > 0:
+                        result_markup.append(MarkUpBlock(text=text_markup[tm].text[left_bounce: date.as_json["start"]],
+                                                         block_type=MarkUpType.NOTHING.value,
+                                                         start=text_markup[tm].start,
+                                                         end=date.as_json["start"]))
                     markup = {}
                     if date.as_json["fact"].year is not None:
                         markup["Year"] = date.as_json["fact"].year
@@ -188,276 +200,315 @@ class TextMarkUp:
                         markup["Month"] = date.as_json["fact"].month
                     if date.as_json["fact"].day is not None:
                         markup["Day"] = date.as_json["fact"].day
-                    pieses.append({piese_text[start:stop]: markup})
-                    left_bounce = stop
-                result_text_markup += pieses + [{piese_text[left_bounce:]: {}}]
+                    result_markup.append(MarkUpBlock(text=text_markup[tm].text[date.as_json["start"]:
+                                                                               date.as_json["stop"]],
+                                                     block_type=MarkUpType.DATE.value,
+                                                     start=date.as_json["start"],
+                                                     end=date.as_json["stop"],
+                                                     attachments=markup))
+                    left_bounce = date.as_json["stop"]
+                if text_markup[tm].end - left_bounce > 0:
+                    result_markup.append(MarkUpBlock(text=text_markup[tm].text[left_bounce:
+                                                                               text_markup[tm].end],
+                                                     block_type=MarkUpType.NOTHING.value,
+                                                     start=left_bounce,
+                                                     end=text_markup[tm].end))
             else:
-                result_text_markup += [text_markup[tm]]
-        return result_text_markup
+                result_markup.append(text_markup[tm])
+        return result_markup
 
-    def get_money_markup(self, text_markup: List[Dict[str, Dict[str, str]]]) -> List[Dict[str, Dict[str, str]]]:
-        """
-        This class receives the pre-marked text as input and places the dates from the pieces
-         that have not yet been marked up.
-        :param text_markup: Pre-marked text
-        :return: List[Dict[str, dict]]
-        """
-        result_text_markup = []
-        for tm in range(len(text_markup)):
-            piese_text = list(text_markup[tm])[0]
-            if len(text_markup[tm][piese_text]) == 0:
-                dates = self._money_extractor(piese_text)
-                left_bounce = 0
-                pieses = []
-                for date in dates:
-                    start = date.as_json["start"]
-                    stop = date.as_json["stop"]
-                    pieses.append({piese_text[left_bounce:start]: {}})  # закрыли левую границу итерации
-                    markup = {}
-                    if date.as_json["fact"].amount is not None:
-                        markup["Amount"] = date.as_json["fact"].amount
-                    if date.as_json["fact"].currency is not None:
-                        markup["Currency"] = date.as_json["fact"].currency
-                    pieses.append({piese_text[start:stop]: markup})
-                    left_bounce = stop
-                result_text_markup += pieses + [{piese_text[left_bounce:]: {}}]
-            else:
-                result_text_markup += [text_markup[tm]]
-
-        return result_text_markup
-
-    def get_phone_markup(self, text_markup: List[Dict[str, Dict[str, str]]]) -> List[Dict[str, Dict[str, str]]]:
+    def get_phone_markup(self, text_markup: List[MarkUpBlock]) -> List[MarkUpBlock]:
         """
         This class receives the pre-marked text as input and places the phones from the pieces
          that have not yet been marked up.
         :param text_markup: Pre-marked text
         :return: List[Dict[str, dict]]
         """
-        result_text_markup = []
-        for tm in range(len(text_markup)):  # Идём по предыдущей разметке
-            piese_text = list(text_markup[tm])[0]
-            if len(text_markup[tm][piese_text]) == 0:
-                phones = TextMarkUp._phone_extractor(piese_text)
-                left_bounce = 0
-                pieses = []
+        result_markup = []
+        for tm in range(len(text_markup)):
+            if MarkUpType(text_markup[tm].block_type) == MarkUpType.NOTHING:
+                phones = TextMarkUp._phone_extractor(text_markup[tm].text)
+                left_bounce = text_markup[tm].start
                 for phone in phones:
-                    start = phone["start"]
-                    stop = phone["stop"]
-                    pieses.append({piese_text[left_bounce:start]: {}})
+                    print(phone["start"], left_bounce)
+                    if phone["start"] - left_bounce > 0:
+                        result_markup.append(MarkUpBlock(text=text_markup[tm].text[left_bounce: phone["start"]],
+                                                         block_type=MarkUpType.NOTHING.value,
+                                                         start=text_markup[tm].start,
+                                                         end=phone["start"]))
                     markup = {}
                     if phone["fact"]["phoneNumber"] is not None:
                         markup["phoneNumber"] = phone["fact"]["phoneNumber"]
-                    pieses.append({piese_text[start:stop]: markup})
-                    left_bounce = stop
-                result_text_markup += pieses + [{piese_text[left_bounce:]: {}}]
+                    result_markup.append(MarkUpBlock(text=text_markup[tm].text[phone["start"]:
+                                                                               phone["stop"]],
+                                                     block_type=MarkUpType.PHONE.value,
+                                                     start=phone["start"],
+                                                     end=phone["stop"],
+                                                     attachments=markup))
+                    left_bounce = phone["stop"]
+                if text_markup[tm].end - left_bounce > 0:
+                    result_markup.append(MarkUpBlock(text=text_markup[tm].text[left_bounce:
+                                                                               text_markup[tm].end],
+                                                     block_type=MarkUpType.NOTHING.value,
+                                                     start=left_bounce,
+                                                     end=text_markup[tm].end))
             else:
-                result_text_markup += [text_markup[tm]]
-        return result_text_markup
+                result_markup.append(text_markup[tm])
+        return result_markup
 
-    def get_inn_markup(self, text_markup: List[Dict[str, Dict[str, str]]]) -> List[Dict[str, Dict[str, str]]]:
+    def get_inn_markup(self, text_markup: List[MarkUpBlock]) -> List[MarkUpBlock]:
         """
         This class receives the pre-marked text as input and places the phones from the pieces
          that have not yet been marked up.
         :param text_markup: Pre-marked text
         :return: List[Dict[str, dict]]
         """
-        result_text_markup = []
-        for tm in range(len(text_markup)):  # Идём по предыдущей разметке
-            piese_text = list(text_markup[tm])[0]
-            if len(text_markup[tm][piese_text]) == 0:
-                inns = TextMarkUp._INN_extractor(piese_text)
-                left_bounce = 0
-                pieses = []
+        result_markup = []
+        for tm in range(len(text_markup)):
+            print(text_markup[tm].block_type == MarkUpType.NOTHING)
+            if MarkUpType(text_markup[tm].block_type) == MarkUpType.NOTHING:
+                inns = TextMarkUp._INN_extractor(text_markup[tm].text)
+                left_bounce = text_markup[tm].start
                 for inn in inns:
-                    start = inn["start"]
-                    stop = inn["stop"]
-                    pieses.append({piese_text[left_bounce:start]: {}})
+                    if inn["start"] - left_bounce > 0:
+                        result_markup.append(MarkUpBlock(text=text_markup[tm].text[left_bounce: inn["start"]],
+                                                         block_type=MarkUpType.NOTHING.value,
+                                                         start=text_markup[tm].start,
+                                                         end=inn["start"]))
                     markup = {}
                     if "organizationINN" in inn["fact"]:
                         markup["organizationINN"] = inn["fact"]["organizationlINN"]
                     elif "personalINN" in inn["fact"]:
                         markup["personalINN"] = inn["fact"]["personalINN"]
-                    pieses.append({piese_text[start:stop]: markup})
-                    left_bounce = stop
-                result_text_markup += pieses + [{piese_text[left_bounce:]: {}}]
+                    result_markup.append(MarkUpBlock(text=text_markup[tm].text[inn["start"]:
+                                                                               inn["stop"]],
+                                                     block_type=MarkUpType.INN.value,
+                                                     start=inn["start"],
+                                                     end=inn["stop"],
+                                                     attachments=markup))
+                    left_bounce = inn["stop"]
+                if text_markup[tm].end - left_bounce > 0:
+                    result_markup.append(MarkUpBlock(text=text_markup[tm].text[left_bounce:
+                                                                               text_markup[tm].end],
+                                                     block_type=MarkUpType.NOTHING.value,
+                                                     start=left_bounce,
+                                                     end=text_markup[tm].end))
             else:
-                result_text_markup += [text_markup[tm]]
-        return result_text_markup
+                result_markup.append(text_markup[tm])
+        return result_markup
 
-    def get_kpp_markup(self, text_markup: List[Dict[str, Dict[str, str]]]) -> List[Dict[str, Dict[str, str]]]:
+    def get_kpp_markup(self, text_markup: List[MarkUpBlock]) -> List[MarkUpBlock]:
         """
         This class receives the pre-marked text as input and places the phones from the pieces
          that have not yet been marked up.
         :param text_markup: Pre-marked text
         :return: List[Dict[str, dict]]
         """
-        result_text_markup = []
-        for tm in range(len(text_markup)):  # Идём по предыдущей разметке
-            piese_text = list(text_markup[tm])[0]
-            if len(text_markup[tm][piese_text]) == 0:
-                kpps = TextMarkUp._KPP_extractor(piese_text)
-                left_bounce = 0
-                pieses = []
+        result_markup = []
+        print("kpp", text_markup)
+        for tm in range(len(text_markup)):
+            if MarkUpType(text_markup[tm].block_type) == MarkUpType.NOTHING:
+                kpps = TextMarkUp._KPP_extractor(text_markup[tm].text)
+                left_bounce = text_markup[tm].start
                 for kpp in kpps:
-                    start = kpp["start"]
-                    stop = kpp["stop"]
-                    pieses.append({piese_text[left_bounce:start]: {}})
+                    if kpp["start"] - left_bounce > 0:
+                        result_markup.append(MarkUpBlock(text=text_markup[tm].text[left_bounce: kpp["start"]],
+                                                         block_type=MarkUpType.NOTHING.value,
+                                                         start=text_markup[tm].start,
+                                                         end=kpp["start"]))
                     markup = {}
                     if "KPP" in kpp["fact"]:
                         markup["KPP"] = kpp["fact"]["KPP"]
-                    pieses.append({piese_text[start:stop]: markup})
-                    left_bounce = stop
-                result_text_markup += pieses + [{piese_text[left_bounce:]: {}}]
+                    result_markup.append(MarkUpBlock(text=text_markup[tm].text[kpp["start"]:
+                                                                               kpp["stop"]],
+                                                     block_type=MarkUpType.KPP.value,
+                                                     start=kpp["start"],
+                                                     end=kpp["stop"],
+                                                     attachments=markup))
+                    left_bounce = kpp["stop"]
+                if text_markup[tm].end - left_bounce > 0:
+                    result_markup.append(MarkUpBlock(text=text_markup[tm].text[left_bounce:
+                                                                               text_markup[tm].end],
+                                                     block_type=MarkUpType.NOTHING.value,
+                                                     start=left_bounce,
+                                                     end=text_markup[tm].end))
             else:
-                result_text_markup += [text_markup[tm]]
-        return result_text_markup
+                result_markup.append(text_markup[tm])
+        return result_markup
 
-    def get_bic_markup(self, text_markup: List[Dict[str, Dict[str, str]]]) -> List[Dict[str, Dict[str, str]]]:
+    def get_bic_markup(self, text_markup: List[MarkUpBlock]) -> List[MarkUpBlock]:
         """
         This class receives the pre-marked text as input and places the phones from the pieces
          that have not yet been marked up.
         :param text_markup: Pre-marked text
         :return: List[Dict[str, dict]]
         """
-        result_text_markup = []
-        for tm in range(len(text_markup)):  # Идём по предыдущей разметке
-            piese_text = list(text_markup[tm])[0]
-            if len(text_markup[tm][piese_text]) == 0:
-                bics = TextMarkUp._BIC_extractor(piese_text)
-                left_bounce = 0
-                pieses = []
+        result_markup = []
+        for tm in range(len(text_markup)):
+            if MarkUpType(text_markup[tm].block_type) == MarkUpType.NOTHING:
+                bics = TextMarkUp._BIC_extractor(text_markup[tm].text)
+                left_bounce = text_markup[tm].start
                 for bic in bics:
-                    start = bic["start"]
-                    stop = bic["stop"]
-                    pieses.append({piese_text[left_bounce:start]: {}})
+                    if bic["start"] - left_bounce > 0:
+                        result_markup.append(MarkUpBlock(text=text_markup[tm].text[left_bounce: bic["start"]],
+                                                         block_type=MarkUpType.NOTHING.value,
+                                                         start=text_markup[tm].start,
+                                                         end=bic["start"]))
                     markup = {}
                     if "BIC" in bic["fact"]:
                         markup["BIC"] = bic["fact"]["BIC"]
-                    pieses.append({piese_text[start:stop]: markup})
-                    left_bounce = stop
-                result_text_markup += pieses + [{piese_text[left_bounce:]: {}}]
+                    result_markup.append(MarkUpBlock(text=text_markup[tm].text[bic["start"]:
+                                                                               bic["stop"]],
+                                                     block_type=MarkUpType.BIC.value,
+                                                     start=bic["start"],
+                                                     end=bic["stop"],
+                                                     attachments=markup))
+                    left_bounce = bic["stop"]
+                if text_markup[tm].end - left_bounce > 0:
+                    result_markup.append(MarkUpBlock(text=text_markup[tm].text[left_bounce:
+                                                                               text_markup[tm].end],
+                                                     block_type=MarkUpType.NOTHING.value,
+                                                     start=left_bounce,
+                                                     end=text_markup[tm].end))
             else:
-                result_text_markup += [text_markup[tm]]
-        return result_text_markup
+                result_markup.append(text_markup[tm])
+        return result_markup
 
-    def get_snils_markup(self, text_markup: List[Dict[str, Dict[str, str]]]) -> List[Dict[str, Dict[str, str]]]:
+    def get_snils_markup(self, text_markup: List[MarkUpBlock]) -> List[MarkUpBlock]:
         """
         This class receives the pre-marked text as input and places the phones from the pieces
          that have not yet been marked up.
         :param text_markup: Pre-marked text
         :return: List[Dict[str, dict]]
         """
-        result_text_markup = []
-        for tm in range(len(text_markup)):  # Идём по предыдущей разметке
-            piese_text = list(text_markup[tm])[0]
-            if len(text_markup[tm][piese_text]) == 0:
-                snilses = TextMarkUp._snils_extractor(piese_text)
-                left_bounce = 0
-                pieses = []
+        result_markup = []
+        for tm in range(len(text_markup)):
+            if MarkUpType(text_markup[tm].block_type) == MarkUpType.NOTHING:
+                snilses = TextMarkUp._snils_extractor(text_markup[tm].text)
+                left_bounce = text_markup[tm].start
                 for snils in snilses:
-                    start = snils["start"]
-                    stop = snils["stop"]
-                    pieses.append({piese_text[left_bounce:start]: {}})
+                    if snils["start"] - left_bounce > 0:
+                        result_markup.append(MarkUpBlock(text=text_markup[tm].text[left_bounce: snils["start"]],
+                                                         block_type=MarkUpType.NOTHING.value,
+                                                         start=text_markup[tm].start,
+                                                         end=snils["start"]))
                     markup = {}
                     if "SNILS" in snils["fact"]:
                         markup["SNILS"] = snils["fact"]["SNILS"]
-                    pieses.append({piese_text[start:stop]: markup})
-                    left_bounce = stop
-                result_text_markup += pieses + [{piese_text[left_bounce:]: {}}]
+                    result_markup.append(MarkUpBlock(text=text_markup[tm].text[snils["start"]:
+                                                                               snils["stop"]],
+                                                     block_type=MarkUpType.SNILS.value,
+                                                     start=snils["start"],
+                                                     end=snils["stop"],
+                                                     attachments=markup))
+                    left_bounce = snils["stop"]
+                if text_markup[tm].end - left_bounce > 0:
+                    result_markup.append(MarkUpBlock(text=text_markup[tm].text[left_bounce:
+                                                                               text_markup[tm].end],
+                                                     block_type=MarkUpType.NOTHING.value,
+                                                     start=left_bounce,
+                                                     end=text_markup[tm].end))
             else:
-                result_text_markup += [text_markup[tm]]
-        return result_text_markup
+                result_markup.append(text_markup[tm])
+        return result_markup
 
-    def get_emails_markup(self, text_markup: List[Dict[str, Dict[str, str]]]) -> List[Dict[str, Dict[str, str]]]:
+    def get_emails_markup(self, text_markup: List[MarkUpBlock]) -> List[MarkUpBlock]:
         """
         This class receives the pre-marked text as input and places the phones from the pieces
          that have not yet been marked up.
         :param text_markup: Pre-marked text
         :return: List[Dict[str, dict]]
         """
-        result_text_markup = []
-        for tm in range(len(text_markup)):  # Идём по предыдущей разметке
-            piese_text = list(text_markup[tm])[0]
-            if len(text_markup[tm][piese_text]) == 0:
-                emails = TextMarkUp._email_extractor(piese_text)
-                left_bounce = 0
-                pieses = []
+        result_markup = []
+        for tm in range(len(text_markup)):
+            if text_markup[tm].block_type == MarkUpType.NOTHING:
+                emails = TextMarkUp._email_extractor(text_markup[tm].text)
+                left_bounce = text_markup[tm].start
                 for email in emails:
-                    start = email["start"]
-                    stop = email["stop"]
-                    pieses.append({piese_text[left_bounce:start]: {}})
+                    if email["start"] - left_bounce > 0:
+                        result_markup.append(MarkUpBlock(text=text_markup[tm].text[left_bounce: email["start"]],
+                                                         block_type=MarkUpType.NOTHING.value,
+                                                         start=text_markup[tm].start,
+                                                         end=email["start"]))
                     markup = {}
                     if "Email" in email["fact"]:
                         markup["Email"] = email["fact"]["Email"]
-                    pieses.append({piese_text[start:stop]: markup})
-                    left_bounce = stop
-                result_text_markup += pieses + [{piese_text[left_bounce:]: {}}]
+                    result_markup.append(MarkUpBlock(text=text_markup[tm].text[email["start"]:
+                                                                               email["stop"]],
+                                                     block_type=MarkUpType.EMAIL.value,
+                                                     start=email["start"],
+                                                     end=email["stop"],
+                                                     attachments=markup))
+                    left_bounce = email["stop"]
+                if text_markup[tm].end - left_bounce > 0:
+                    result_markup.append(MarkUpBlock(text=text_markup[tm].text[left_bounce:
+                                                                               text_markup[tm].end],
+                                                     block_type=MarkUpType.NOTHING.value,
+                                                     start=left_bounce,
+                                                     end=text_markup[tm].end))
             else:
-                result_text_markup += [text_markup[tm]]
-        return result_text_markup
+                result_markup.append(text_markup[tm])
+        return result_markup
 
-    def get_urls_markup(self, text_markup: List[Dict[str, Dict[str, str]]]) -> List[Dict[str, Dict[str, str]]]:
+    def get_urls_markup(self, text_markup: List[MarkUpBlock]) -> List[MarkUpBlock]:
         """
         This class receives the pre-marked text as input and places the phones from the pieces
          that have not yet been marked up.
         :param text_markup: Pre-marked text
         :return: List[Dict[str, dict]]
         """
-        result_text_markup = []
-        for tm in range(len(text_markup)):  # Идём по предыдущей разметке
-            piese_text = list(text_markup[tm])[0]
-            if len(text_markup[tm][piese_text]) == 0:
-                urls = TextMarkUp._url_extractor(piese_text)
-                left_bounce = 0
-                pieses = []
+        result_markup = []
+        for tm in range(len(text_markup)):
+            if MarkUpType(text_markup[tm].block_type) == MarkUpType.NOTHING:
+                urls = TextMarkUp._url_extractor(text_markup[tm].text)
+                left_bounce = text_markup[tm].start
                 for url in urls:
-                    start = url["start"]
-                    stop = url["stop"]
-                    pieses.append({piese_text[left_bounce:start]: {}})
+                    if url["start"] - left_bounce > 0:
+                        result_markup.append(MarkUpBlock(text=text_markup[tm].text[left_bounce: url["start"]],
+                                                         block_type=MarkUpType.NOTHING.value,
+                                                         start=text_markup[tm].start,
+                                                         end=url["start"]))
                     markup = {}
                     if "Url" in url["fact"]:
                         markup["Url"] = url["fact"]["Url"]
-                    pieses.append({piese_text[start:stop]: markup})
-                    left_bounce = stop
-                result_text_markup += pieses + [{piese_text[left_bounce:]: {}}]
+                    result_markup.append(MarkUpBlock(text=text_markup[tm].text[url["start"]:
+                                                                               url["stop"]],
+                                                     block_type=MarkUpType.URL.value,
+                                                     start=url["start"],
+                                                     end=url["stop"],
+                                                     attachments=markup))
+                    left_bounce = url["stop"]
+                if text_markup[tm].end - left_bounce > 0:
+                    result_markup.append(MarkUpBlock(text=text_markup[tm].text[left_bounce:
+                                                                               text_markup[tm].end],
+                                                     block_type=MarkUpType.NOTHING.value,
+                                                     start=left_bounce,
+                                                     end=text_markup[tm].end))
             else:
-                result_text_markup += [text_markup[tm]]
-        return result_text_markup
-
-    def encode(self, text_markup: List[Dict[str, Dict[str, str]]]) -> List[MarkUp]:
-        encoded_markup = []
-        for markup in text_markup:
-            encoded_markup.append(MarkUp(item=markup))
-        return encoded_markup
+                result_markup.append(text_markup[tm])
+        return result_markup
 
     @staticmethod
-    def rebuild_markup(text_markup: List[Dict[str, Dict[str, str]]]) -> List[Dict[str, Dict[str, str]]]:
+    def rebuild_markup(text_markup: List[MarkUpBlock]) -> List[MarkUpBlock]:
         """
         This method reformats the markup, combines unmarked elements (the consequences of using Natasha),
         removes empty elements (arise as a result of using the algorithm)
         :param text_markup: Markuped text
         :return List[Dict[str, dict]]
         """
-        markuped_text = []
-        tm = 0
-        while tm < len(text_markup):
-            this_str = list(text_markup[tm])[0].strip()
-            this_val = text_markup[tm][list(text_markup[tm])[0]]
-            try:
-                next_str = list(text_markup[tm + 1])[0].strip()
-                next_val = text_markup[tm + 1][list(text_markup[tm + 1])[0]]
-                if len(this_val) == 0 and len(next_val) == 0:
-                    markuped_text.append({f"{this_str} {next_str}".strip(): {}})
-                    tm += 1
-                else:
-                    markuped_text.append({this_str.strip(): this_val})
-            except:
-                markuped_text.append({this_str.strip(): this_val})
-            tm += 1
-        for i in reversed(range(len(markuped_text))):
-            if list(markuped_text[i].keys())[0] == '':
-                del markuped_text[i]
-        return markuped_text
+        result = []
+        index = 0
+        while index <= len(text_markup) - 1:
+            if text_markup[index].block_type == MarkUpType.NOTHING and \
+                    text_markup[index + 1].block_type == MarkUpType.NOTHING:
+                result.append(MarkUpBlock(text=f"{text_markup[index].text} {text_markup[index + 1].text}".strip(),
+                                          block_type=MarkUpType.NOTHING.value,
+                                          start=text_markup[index].start,
+                                          end=text_markup[index + 1].end))
+            else:
+                result.append(text_markup[index])
+            index += 1
+        return result
 
     @staticmethod
     def _phone_extractor(text: str) -> List[Dict[str, Any]] or None:
@@ -631,4 +682,3 @@ class TextMarkUp:
                 pass
         sectors.append(this_text)
         return sectors
-

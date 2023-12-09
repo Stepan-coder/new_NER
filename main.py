@@ -29,6 +29,7 @@
 
 import NER
 
-text = "Меня зовут Бородин Степан и я работаю в компани Motiv И я первый, кто полетел в космос. Я прочитал книгу Льва Толстого Война и мир. Я вылетел из аэрпорта Домодедово в аэропорт внукво, там мне пришлось говорить на английском"
-marcup = NER.TextMarkUp(is_bert=True, is_pro_bert=True, download=True)
-print(marcup.get_bert_markup(input_text=text))
+text = "Мы заключили договор 25 января 2005 года тел 89801856564 inn 00000000000"
+marcup = NER.TextMarkUp(is_bert=False, is_pro_bert=True, download=True)
+# print(marcup.get_bert_markup(text=text))
+print(marcup.get_markup(text=text))
