@@ -16,7 +16,7 @@ class TextProcessor:
                 text = text.replace("\n", " ").replace("  ", " ")
             self._last_text = text
         answer = self._model_qa_ml([self._last_text], [question])
-        answer = answer[0] if len(answer) > 0 else "Without answer!"
+        answer = answer[0][0] if len(answer) > 0 else "Without answer!"
         if markup:
             return [block.to_json() for block in self._text_markup.get_markup(text=answer)]
         # .replace("\n", " ").replace("  ", " ")
@@ -38,5 +38,10 @@ print(text_processor.QA(question="Как зовут поставщика?", mark
 
 print(text_processor.QA(question="Какой ИНН у поставщика?", markup=True))
 
+print(text_processor.QA(question="Когда был составлен этот договор?", markup=True))
+
+print(text_processor.QA(question="В течении какого времени должны быть перечислены средства?", markup=True))
+
+print(text_processor.QA(question="В каком банке обслуживается поставщик?", markup=True))
 
 
