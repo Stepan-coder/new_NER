@@ -1,0 +1,85 @@
+{
+    "main_information": {
+        "status": "",
+        "registry_number": "",
+        "completed_purchase": "",
+        "conclusion_law": "п. 4 ч. 1 ст. 93 Федерального закона от 05 апреля 2013 года № 44-ФЗ «",
+        "placement_method": "",
+        "basis_conclusion": "",
+        "contract_security_required": "",
+        "number": "",
+        "validity": {
+            "from": "",
+            "to": "",
+            "from_moment_signing": true
+        },
+        "subject_contract": "",
+        "place_detention": "",
+        "IKZ": 232590410132259060100100010000000244,
+        "source_financing": "",
+        "NDS_is_not_appearing": false,
+        "value": 0,
+        "is_prepayment": false,
+        "prepayment": 0
+    },
+    "customer_information": {
+        "name": "КМСЧ № 1",
+        "signatory": "В.А. Агафонов",
+        "general_information": {
+            "actual_address": "",
+            "INN": 5902835222,
+            "KPP": 590201001,
+            "OGRN": ""
+        },
+        "bank_details": {
+            "bank_name": "Волго-Вятский банк  ПАО Сбербанк",
+            "BIK": 42202603,
+            "correspondent_account": "",
+            "checking_account": ""
+        },
+        "contact_details": {
+            "contact person": "",
+            "phone": "",
+            "email": ""
+        }
+    },
+    "supplier_information": {
+        "name": "КМСЧ № 1",
+        "signatory": "В.А. Агафонов",
+        "general_information": {
+            "actual_address": "",
+            "INN": 5904101322,
+            "KPP": 590601001,
+            "OGRN": 1025900917481
+        },
+        "bank_details": {
+            "bank_name": "Отделение ПЕРМЬ БАНКА РОССИИ/УФК",
+            "BIK": 15773997,
+            "correspondent_account": "",
+            "checking_account": ""
+        },
+        "contact_details": {
+            "contact person": "В.А. Агафонов",
+            "phone": "",
+            "email": "mail: Kmsch1zakup@mail.ru"
+        }
+    },
+    "specification": {
+        "item_name": "",
+        "OKPD2": "",
+        "price_with_NDS": 0,
+        "count": "",
+        "NDS": "",
+        "value_with_NDS": 0
+    },
+    "delivery_information": {
+        "delivery_stage": {
+            "address": "",
+            "delivery_time": "",
+            "item_name": "",
+            "price_with_NDS": 0,
+            "count": "",
+            "value_with_NDS": 0
+        }
+    }
+}

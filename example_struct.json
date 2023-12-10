@@ -1,0 +1,85 @@
+{
+    "main_information": {
+        "status": "",
+        "registry_number": "",
+        "completed_purchase": "",
+        "conclusion_law": "",
+        "placement_method": "",
+        "basis_conclusion": "",
+        "contract_security_required": "",
+        "number": "",
+        "validity": {
+            "from": "",
+            "to": "",
+            "from_moment_signing": true
+        },
+        "subject_contract": "",
+        "place_detention": "",
+        "IKZ": "",
+        "source_financing": "",
+        "NDS_is_not_appearing": false,
+        "value": 0,
+        "is_prepayment": false,
+        "prepayment": 0
+    },
+    "customer_information": {
+        "name": "",
+        "signatory": "",
+        "general_information": {
+            "actual_address": "",
+            "INN": "",
+            "KPP": "",
+            "OGRN": ""
+        },
+        "bank_details": {
+            "bank_name": "",
+            "BIK": "",
+            "correspondent_account": "",
+            "checking_account": ""
+        },
+        "contact_details": {
+            "contact person": "",
+            "phone": "",
+            "email": ""
+        }
+    },
+    "supplier_information": {
+        "name": "",
+        "signatory": "",
+        "general_information": {
+            "actual_address": "",
+            "INN": "",
+            "KPP": "",
+            "OGRN": ""
+        },
+        "bank_details": {
+            "bank_name": "",
+            "BIK": "",
+            "correspondent_account": "",
+            "checking_account": ""
+        },
+        "contact_details": {
+            "contact person": "",
+            "phone": "",
+            "email": ""
+        }
+    },
+    "specification": {
+        "item_name": "",
+        "OKPD2": "",
+        "price_with_NDS": 0,
+        "count": "",
+        "NDS": "",
+        "value_with_NDS": 0
+    },
+    "delivery_information": {
+        "delivery_stage": {
+            "address": "",
+            "delivery_time": "",
+            "item_name": "",
+            "price_with_NDS": 0,
+            "count": "",
+            "value_with_NDS": 0
+        }
+    }
+}

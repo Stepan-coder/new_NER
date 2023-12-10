@@ -1,35 +1,42 @@
-# pip install deeppavlov
-# pip install git+https://github.com/Koziev/rutokenizer
-# python -m deeppavlov install ner_ontonotes_bert_mult
-# python -m deeppavlov interact ner_ontonotes_bert_mult -d
-# python -m deeppavlov install squad_bert
-# python -m deeppavlov interact squad_bert -d
-# python -m deeppavlov install squad_ru_bert
-#
-# import NER
-#
-# from deeppavlov import configs, build_model
-#
-#
-# ner_model_ml = build_model(configs.ner.ner_ontonotes_bert_mult, download=True)
-#
-#
-# print(ner_model_ml(["Меня зовут Бородин Степан и я работаю в компани И я первый, кто полетел в космос. Я прочитал книгу Льва Толстого Война и мир. Я вылетел из аэрпорта Домодедово в аэропорт внукво, там мне пришлось говорить на английском"]))
-#
+from NER import *
+from deeppavlov import build_model, configs
+
+# with open('doc.txt', 'r', encoding='utf-8') as file:
+#     context_ru = file.read()
+
+class TextProcessor:
+    def __init__(self, is_bert=True, is_pro_bert=True, download=True):
+        self._text_markup = TextMarkUp(is_bert=is_bert, is_pro_bert=is_pro_bert, download=download)
+        self._model_qa_ml = build_model(configs.squad.squad_ru_bert, download=download)
+        self._last_text = ""
+
+    def QA(self, question: str, text: str = None, markup: bool = False) -> List[str]:
+        if text is not None and text != self._last_text:
+            while '\n' in text or '  ' in text:
+                text = text.replace("\n", " ").replace("  ", " ")
+            self._last_text = text
+        answer = self._model_qa_ml([self._last_text], [question])
+        answer = answer[0] if len(answer) > 0 else "Without answer!"
+        if markup:
+            return [block.to_json() for block in self._text_markup.get_markup(text=answer)]
+        # .replace("\n", " ").replace("  ", " ")
+        return [answer]
 
 
-# NER.MarkUp()
-# from deeppavlov import build_model, configs
-# model_qa_ml = build_model(configs.squad.squad_ru_bert, download=True)
-#
-# context_ru = "Меня зовут Бородин Степан, я студент 2-го курса магистратуры, Уральского Федерального Университета. Живу я в городе Екатеринбург, мои адреса электронной почты test@test.com и mymail@mail.com. В ближайшее время, я еду на хакатон в Пермь."
-#
-# print(model_qa_ml([context_ru],
-#       ["я обучаюсь?"]))
+def read_txt(path: str) -> str:
+    with open(path, 'r', encoding='utf-8') as file:
+        return file.read()
 
-import NER
 
-text = "Мы заключили договор 25 января 2005 года тел 89801856564 inn 00000000000"
-marcup = NER.TextMarkUp(is_bert=False, is_pro_bert=True, download=True)
-# print(marcup.get_bert_markup(text=text))
-print(marcup.get_markup(text=text))
+text_processor = TextProcessor(is_bert=True, is_pro_bert=True, download=True)
+text = read_txt(path='doc.txt')
+
+
+print(text_processor.QA(text=text, question="Какая цена договора?"))
+
+print(text_processor.QA(question="Как зовут поставщика?", markup=True))
+
+print(text_processor.QA(question="Какой ИНН у поставщика?", markup=True))
+
+
+

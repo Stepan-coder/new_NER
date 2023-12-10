@@ -1,0 +1,370 @@
+{
+    "main_information": {
+        "status": {
+            "status": "not_used",
+            "tag": "O",
+            "type": "",
+            "in_text": ""
+        },
+        "registry_number": {
+            "status": "not_used",
+            "tag": "O",
+            "type": "",
+            "in_text": ""
+        },
+        "completed_purchase": {
+            "status": "not_used",
+            "tag": "O",
+            "type": "",
+            "in_text": ""
+        },
+        "conclusion_law": {
+            "status": "used",
+            "tag": "LAW",
+            "type": "str",
+            "in_text": "ФЗ"
+        },
+        "placement_method": {
+            "status": "not_used",
+            "tag": "O",
+            "type": "",
+            "in_text": ""
+        },
+        "basis_conclusion": {
+            "status": "not_used",
+            "tag": "O",
+            "type": "",
+            "in_text": ""
+        },
+        "contract_security_required": {
+            "status": "not_used",
+            "tag": "O",
+            "type": "",
+            "in_text": ""
+        },
+        "number": {
+            "status": "not_used",
+            "tag": "O",
+            "type": "",
+            "in_text": ""
+        },
+        "validity": {
+            "from": {
+                "status": "used",
+                "tag": "DATE",
+                "type": "",
+                "in_text": ""
+            },
+            "to": {
+                "status": "used",
+                "tag": "DATE",
+                "type": "",
+                "in_text": ""
+            },
+            "from_moment_signing": {
+                "status": "not_used",
+                "tag": "O",
+                "type": "",
+                "in_text": ""
+            }
+        },
+        "subject_contract": {
+            "status": "not_used",
+            "tag": "O",
+            "type": "",
+            "in_text": ""
+        },
+        "place_detention": {
+            "status": "not_used",
+            "tag": "O",
+            "type": "",
+            "in_text": ""
+        },
+        "IKZ": {
+            "status": "used",
+            "tag": "IKZ",
+            "type": "int",
+            "in_text": ""
+        },
+        "source_financing": {
+            "status": "not_used",
+            "tag": "O",
+            "type": "",
+            "in_text": ""
+        },
+        "NDS_is_not_appearing": {
+            "status": "not_used",
+            "tag": "O",
+            "type": "",
+            "in_text": ""
+        },
+        "value": {
+            "status": "used",
+            "tag": "MONEY",
+            "type": "",
+            "in_text": ""
+        },
+        "is_prepayment": {
+            "status": "not_used",
+            "tag": "O",
+            "type": "",
+            "in_text": ""
+        },
+        "prepayment": {
+            "status": "not_used",
+            "tag": "O",
+            "type": "",
+            "in_text": ""
+        }
+    },
+    "customer_information": {
+        "name": {
+            "status": "used",
+            "tag": "ORG",
+            "type": "str",
+            "in_text": ""
+        },
+        "signatory": {
+            "status": "used",
+            "tag": "PERSON",
+            "type": "str",
+            "in_text": ""
+        },
+        "general_information": {
+            "actual_address": {
+                "status": "used",
+                "tag": "LOCATION",
+                "type": "str",
+                "in_text": ""
+            },
+            "INN": {
+                "status": "used",
+                "tag": "INN",
+                "type": "int",
+                "in_text": ""
+            },
+            "KPP": {
+                "status": "used",
+                "tag": "KPP",
+                "type": "int",
+                "in_text": ""
+            },
+            "OGRN": {
+                "status": "used",
+                "tag": "OGRN",
+                "type": "int",
+                "in_text": ""
+            }
+        },
+        "bank_details": {
+            "bank_name": {
+                "status": "used",
+                "tag": "ORG",
+                "type": "str",
+                "in_text": "ПАО"
+            },
+            "BIK": {
+                "status": "used",
+                "tag": "BIC",
+                "type": "int",
+                "in_text": ""
+            },
+            "correspondent_account": {
+                "status": "not_used",
+                "tag": "O",
+                "type": "",
+                "in_text": ""
+            },
+            "checking_account": {
+                "status": "not_used",
+                "tag": "O",
+                "type": "",
+                "in_text": ""
+            }
+        },
+        "contact_details": {
+            "contact person": {
+                "status": "used",
+                "tag": "PERSON",
+                "type": "str",
+                "in_text": ""
+            },
+            "phone": {
+                "status": "used",
+                "tag": "PHONE",
+                "type": "str",
+                "in_text": ""
+            },
+            "email": {
+                "status": "used",
+                "tag": "EMAIL",
+                "type": "str",
+                "in_text": "@"
+            }
+        }
+    },
+    "supplier_information": {
+        "name": {
+            "status": "used",
+            "tag": "ORG",
+            "type": "str",
+            "in_text": ""
+        },
+        "signatory": {
+            "status": "used",
+            "tag": "PERSON",
+            "type": "str",
+            "in_text": ""
+        },
+        "general_information": {
+            "actual_address": {
+                "status": "not_used",
+                "tag": "O",
+                "type": "",
+                "in_text": ""
+            },
+            "INN": {
+                "status": "used",
+                "tag": "INN",
+                "type": "int",
+                "in_text": ""
+            },
+            "KPP": {
+                "status": "used",
+                "tag": "KPP",
+                "type": "int",
+                "in_text": ""
+            },
+            "OGRN": {
+                "status": "used",
+                "tag": "OGRN",
+                "type": "int",
+                "in_text": ""
+            }
+        },
+        "bank_details": {
+            "bank_name": {
+                "status": "used",
+                "tag": "ORG",
+                "type": "str",
+                "in_text": "БАНК"
+            },
+            "BIK": {
+                "status": "used",
+                "tag": "BIC",
+                "type": "int",
+                "in_text": ""
+            },
+            "correspondent_account": {
+                "status": "not_used",
+                "tag": "O",
+                "type": "",
+                "in_text": ""
+            },
+            "checking_account": {
+                "status": "not_used",
+                "tag": "O",
+                "type": "",
+                "in_text": ""
+            }
+        },
+        "contact_details": {
+            "contact person": {
+                "status": "used",
+                "tag": "PERSON",
+                "type": "str",
+                "in_text": ""
+            },
+            "phone": {
+                "status": "used",
+                "tag": "PHONE",
+                "type": "str",
+                "in_text": ""
+            },
+            "email": {
+                "status": "used",
+                "tag": "EMAIL",
+                "type": "str",
+                "in_text": "@"
+            }
+        }
+    },
+    "specification": {
+        "item_name": {
+            "status": "not_used",
+            "tag": "O",
+            "type": "",
+            "in_text": ""
+        },
+        "OKPD2": {
+            "status": "not_used",
+            "tag": "O",
+            "type": "",
+            "in_text": ""
+        },
+        "price_with_NDS": {
+            "status": "not_used",
+            "tag": "O",
+            "type": "",
+            "in_text": ""
+        },
+        "count": {
+            "status": "not_used",
+            "tag": "O",
+            "type": "",
+            "in_text": ""
+        },
+        "NDS": {
+            "status": "not_used",
+            "tag": "O",
+            "type": "",
+            "in_text": ""
+        },
+        "value_with_NDS": {
+            "status": "not_used",
+            "tag": "O",
+            "type": "",
+            "in_text": ""
+        }
+    },
+    "delivery_information": {
+        "delivery_stage": {
+            "address": {
+                "status": "not_used",
+                "tag": "O",
+                "type": "",
+                "in_text": ""
+            },
+            "delivery_time": {
+                "status": "not_used",
+                "tag": "O",
+                "type": "",
+                "in_text": ""
+            },
+            "item_name": {
+                "status": "not_used",
+                "tag": "O",
+                "type": "",
+                "in_text": ""
+            },
+            "price_with_NDS": {
+                "status": "not_used",
+                "tag": "O",
+                "type": "",
+                "in_text": ""
+            },
+            "count": {
+                "status": "not_used",
+                "tag": "O",
+                "type": "",
+                "in_text": ""
+            },
+            "value_with_NDS": {
+                "status": "not_used",
+                "tag": "O",
+                "type": "",
+                "in_text": ""
+            }
+        }
+    }
+}
