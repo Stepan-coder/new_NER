@@ -18,9 +18,9 @@ class TextProcessor:
         answer = self._model_qa_ml([self._last_text], [question])
         answer = answer[0][0] if len(answer) > 0 else "Without answer!"
         if markup:
-            return [block.to_json() for block in self._text_markup.get_markup(text=answer)]
+            return answer, [block.to_json() for block in self._text_markup.get_markup(text=answer)]
         # .replace("\n", " ").replace("  ", " ")
-        return [answer]
+        return answer, [answer]
 
 
 def read_txt(path: str) -> str:
